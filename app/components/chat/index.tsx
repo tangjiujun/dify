@@ -15,6 +15,7 @@ import Toast from '@/app/components/base/toast'
 import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
 import ImageList from '@/app/components/base/image-uploader/image-list'
 import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
+import Recorder from './xfyun/Recorder';
 
 export type IChatProps = {
   chatList: IChatItem[]
@@ -82,7 +83,7 @@ const Chat: FC<IChatProps> = ({
     notify({ type: 'error', message, duration: 3000 })
   }
 
-  const valid = () => {
+  const valid = (query: string) => {
     if (!query || query.trim() === '') {
       logError('Message cannot be empty')
       return false
@@ -104,8 +105,8 @@ const Chat: FC<IChatProps> = ({
     onClear,
   } = useImageFiles()
 
-  const handleSend = () => {
-    if (!valid() || (checkCanSend && !checkCanSend()))
+  const doHandleSend = (query: string) => {
+    if (!valid(query) || (checkCanSend && !checkCanSend()))
       return
     onSend(query, files.filter(file => file.progress !== -1).map(fileItem => ({
       type: 'image',
@@ -119,6 +120,10 @@ const Chat: FC<IChatProps> = ({
       if (!isResponsing)
         setQuery('')
     }
+  }
+
+  const handleSend = () => {
+    doHandleSend(query);
   }
 
   const handleKeyUp = (e: any) => {
@@ -203,6 +208,7 @@ const Chat: FC<IChatProps> = ({
                 autoSize
               />
               <div className="absolute bottom-2 right-2 flex items-center h-8">
+                <Recorder handleSend={doHandleSend} />
                 <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
                 <Tooltip
                   selector='send-tip'

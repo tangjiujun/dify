@@ -50,9 +50,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Using Docker
 
 ```
-docker build . -t <DOCKER_HUB_REPO>/webapp-conversation:latest
+docker build . -t webapp-conversation:latest
 # now you can access it in port 3000
-docker run -p 3000:3000 <DOCKER_HUB_REPO>/webapp-conversation:latest
+docker run -p 3000:3000 webapp-conversation:latest
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
