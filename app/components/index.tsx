@@ -22,6 +22,7 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
+import { connectWebSocket } from './chat/xfyun/Player'
 
 const Main: FC = () => {
   const { t } = useTranslation()
@@ -382,8 +383,7 @@ const Main: FC = () => {
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
         if (!isAgentMode) {
           responseItem.content = responseItem.content + message
-        }
-        else {
+        } else {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
           if (lastThought)
             lastThought.thought = lastThought.thought + message // need immer setAutoFreeze
@@ -498,6 +498,7 @@ const Main: FC = () => {
         }
         // not support show citation
         // responseItem.citation = messageEnd.retriever_resources
+        connectWebSocket(responseItem.content)
         const newListWithAnswer = produce(
           getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
           (draft) => {

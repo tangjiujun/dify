@@ -1,6 +1,6 @@
 import CryptoJS from '@/utils/xfyun/crypto-js';
 import { useState } from 'react';
-import RecorderManager from '@/utils/xfyun/index.umd';
+import RecorderManager from '@/utils/xfyun/iat.umd';
 
 const APPID = "0b95436f";
 const API_SECRET = "NTUyNGJkYzM5YzVkZDQ1NzlmODgwYjI0";
@@ -9,7 +9,7 @@ let query = "";
 
 const Recorder = ({ handleSend }) => {
     const [btnStatus, setBtnStatus] = useState("CLOSED")
-    const [recorder, _] = useState(new RecorderManager("./"));
+    const [recorder, _] = useState(new RecorderManager("./iat"));
 
     const getWebSocketUrl = () => {
         var url = "wss://iat-api.xfyun.cn/v2/iat";
