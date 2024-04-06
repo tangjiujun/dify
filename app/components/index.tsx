@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
+import { usePlayer } from './chat/xfyun/use-player'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
@@ -22,14 +23,13 @@ import AppUnavailable from '@/app/components/app-unavailable'
 import { API_KEY, APP_ID, APP_INFO, isShowPrompt, promptTemplate } from '@/config'
 import type { Annotation as AnnotationType } from '@/types/log'
 import { addFileInfos, sortAgentSorts } from '@/utils/tools'
-import { connectWebSocket } from './chat/xfyun/Player'
 
 const Main: FC = () => {
   const { t } = useTranslation()
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const hasSetAppConfig = APP_ID && API_KEY
-
+  const { defaultReading, setDefaultReading, handlePlay, handleStop } = usePlayer()
   /*
   * app info
   */
@@ -132,6 +132,7 @@ const Main: FC = () => {
             id: `question-${item.id}`,
             content: item.query,
             isAnswer: false,
+            isReading: false,
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
 
           })
@@ -141,6 +142,7 @@ const Main: FC = () => {
             agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
             feedback: item.feedback,
             isAnswer: true,
+            isReading: false,
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
           })
         })
@@ -205,6 +207,7 @@ const Main: FC = () => {
       content: caculatedIntroduction,
       isAnswer: true,
       feedbackDisabled: true,
+      isReading: false,
       isOpeningStatement: isShowPrompt,
     }
     if (caculatedIntroduction)
@@ -318,6 +321,16 @@ const Main: FC = () => {
     setChatList(newListWithAnswer)
   }
 
+  const handleReadingTrigger = (flag: boolean, itemId: string) => {
+    setChatList(chatList.map(item => ({
+      ...item,
+      ...(item.id === itemId ? { isReading: flag } : {}),
+    })))
+    const currentChat = chatList.find(it => it.id === itemId)
+    if (currentChat)
+      flag ? handlePlay(currentChat.content) : handleStop()
+  }
+
   const handleSend = async (message: string, files?: VisionFile[]) => {
     if (isResponsing) {
       notify({ type: 'info', message: t('app.errorMessage.waitForResponse') })
@@ -368,6 +381,7 @@ const Main: FC = () => {
       content: '',
       agent_thoughts: [],
       message_files: [],
+      isReading: defaultReading,
       isAnswer: true,
     }
     let hasSetResponseId = false
@@ -383,7 +397,8 @@ const Main: FC = () => {
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
         if (!isAgentMode) {
           responseItem.content = responseItem.content + message
-        } else {
+        }
+        else {
           const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
           if (lastThought)
             lastThought.thought = lastThought.thought + message // need immer setAutoFreeze
@@ -498,7 +513,16 @@ const Main: FC = () => {
         }
         // not support show citation
         // responseItem.citation = messageEnd.retriever_resources
-        connectWebSocket(responseItem.content)
+        if (responseItem.isReading) {
+          console.log('responseItem.content-', responseItem)
+          handlePlay(responseItem.content).then(() => {
+            setChatList(() => chatList.map(it => ({
+              ...it,
+              ...(it.id === responseItem.id ? { isReading: false } : {}),
+            })))
+          })
+        }
+
         const newListWithAnswer = produce(
           getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
           (draft) => {
@@ -597,8 +621,7 @@ const Main: FC = () => {
             canEidtInpus={canEditInpus}
             savedInputs={currInputs as Record<string, any>}
             onInputsChange={setCurrInputs}
-          ></ConfigSence>
-
+          />
           {
             hasSetInputs && (
               <div className='relative grow h-[200px] pc:w-[794px] max-w-full mobile:w-full pb-[66px] mx-auto mb-3.5 overflow-hidden'>
@@ -606,6 +629,9 @@ const Main: FC = () => {
                   <Chat
                     chatList={chatList}
                     onSend={handleSend}
+                    isDefaultReading={defaultReading}
+                    onDefaultReadingTrigger={setDefaultReading}
+                    onReadingTrigger={handleReadingTrigger}
                     onFeedback={handleFeedback}
                     isResponsing={isResponsing}
                     checkCanSend={checkCanSend}

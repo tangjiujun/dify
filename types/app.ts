@@ -56,6 +56,7 @@ export type MessageMore = {
 export type IChatItem = {
   id: string
   content: string
+  isReading: boolean
   /**
    * Specific message type
    */

@@ -1,150 +1,110 @@
-import CryptoJS from '@/utils/xfyun/crypto-js';
-import { useState } from 'react';
-import RecorderManager from '@/utils/xfyun/iat.umd';
+import type { FC } from 'react'
+import React, { useEffect, useRef } from 'react'
+import { Button } from '@arco-design/web-react'
+import { IconVoice } from '@arco-design/web-react/icon'
+import XfRecorder from '@/utils/xfyun/iat.umd'
+import { getWebSocket } from '@/app/api/utils/socket'
+import {
+  getRecordWebSocketUrl,
+  getRecorderParam,
+  parseRecordingMessage,
+  toBase64,
+} from '@/app/components/chat/xfyun/xf-util'
 
-const APPID = "0b95436f";
-const API_SECRET = "NTUyNGJkYzM5YzVkZDQ1NzlmODgwYjI0";
-const API_KEY = "b332d962fe2a6e1d6e4e35b2634955fe";
-let query = "";
-
-const Recorder = ({ handleSend }) => {
-    const [btnStatus, setBtnStatus] = useState("CLOSED")
-    const [recorder, _] = useState(new RecorderManager("./iat"));
-
-    const getWebSocketUrl = () => {
-        var url = "wss://iat-api.xfyun.cn/v2/iat";
-        var host = "iat-api.xfyun.cn";
-        var apiKey = API_KEY;
-        var apiSecret = API_SECRET;
-        var date = new Date().toGMTString();
-        var algorithm = "hmac-sha256";
-        var headers = "host date request-line";
-        var signatureOrigin = `host: ${host}\ndate: ${date}\nGET /v2/iat HTTP/1.1`;
-        var signatureSha = CryptoJS.HmacSHA256(signatureOrigin, apiSecret);
-        var signature = CryptoJS.enc.Base64.stringify(signatureSha);
-        var authorizationOrigin = `api_key="${apiKey}", algorithm="${algorithm}", headers="${headers}", signature="${signature}"`;
-        var authorization = btoa(authorizationOrigin);
-        url = `${url}?authorization=${authorization}&date=${date}&host=${host}`;
-        return url;
-    }
-
-    function toBase64(buffer) {
-        var binary = "";
-        var bytes = new Uint8Array(buffer);
-        var len = bytes.byteLength;
-        for (var i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return window.btoa(binary);
-    }
-
-    const connectWebSocket = () => {
-        const websocketUrl = getWebSocketUrl();
-        var iatWS;
-        if ("WebSocket" in window) {
-            iatWS = new WebSocket(websocketUrl);
-        } else if ("MozWebSocket" in window) {
-            iatWS = new MozWebSocket(websocketUrl);
-        } else {
-            alert("浏览器不支持WebSocket");
-            return;
-        }
-        changeBtnStatus("CONNECTING");
-        iatWS.onopen = (e) => {
-            // 开始录音
-            recorder.start({
-                sampleRate: 16000,
-                frameSize: 1280,
-            });
-            var params = {
-                common: {
-                    app_id: APPID,
-                },
-                business: {
-                    language: "zh_cn",
-                    domain: "iat",
-                    accent: "mandarin",
-                    vad_eos: 5000,
-                    dwa: "wpgs",
-                },
-                data: {
-                    status: 0,
-                    format: "audio/L16;rate=16000",
-                    encoding: "raw",
-                },
-            };
-            iatWS.send(JSON.stringify(params));
-        };
-        iatWS.onmessage = (e) => {
-            renderResult(e.data, iatWS)
-        };
-        iatWS.onclose = (e) => {
-            recorder.stop()
-            changeBtnStatus("CLOSED");
-            handleSend(query);
-        };
-        iatWS.onerror = (e) => {
-            recorder.stop();
-            changeBtnStatus("CLOSED");
-        };
-        recorder.onStart = () => {
-            changeBtnStatus("OPEN");
-        }
-        recorder.onFrameRecorded = ({ isLastFrame, frameBuffer }) => {
-            if (iatWS.readyState === iatWS.OPEN) {
-                iatWS.send(
-                    JSON.stringify({
-                        data: {
-                            status: isLastFrame ? 2 : 1,
-                            format: "audio/L16;rate=16000",
-                            encoding: "raw",
-                            audio: toBase64(frameBuffer),
-                        },
-                    })
-                );
-                if (isLastFrame) {
-                    changeBtnStatus("CLOSING");
-                }
-            }
-        };
-    }
-
-    const renderResult = (resultData, iatWS) => {
-        let jsonData = JSON.parse(resultData);
-        let str = "";
-        if (jsonData.data && jsonData.data.result) {
-            let data = jsonData.data.result;
-            let ws = data.ws;
-            for (let i = 0; i < ws.length; i++) {
-                str = str + ws[i].cw[0].w;
-            }
-        }
-        if (jsonData.code === 0 && jsonData.data.status === 2) {
-            iatWS.close();
-        }
-        if (jsonData.code !== 0) {
-            iatWS.close();
-            console.error(jsonData);
-        }
-        console.log('str ' + str)
-        query = query + str;
-    }
-
-    function changeBtnStatus(status) {
-        setBtnStatus(status)
-    }
-
-    const handleBtnClick = () => {
-        if (btnStatus === "CLOSED") {
-            query = ''
-            connectWebSocket();
-        } else if (btnStatus === "CONNECTING" || btnStatus === "OPEN") {
-            recorder.stop();
-        }
-    };
-
-    return (
-        <button id="btn_control" onClick={handleBtnClick}>{btnStatus}</button>
-    );
+type XfRecord = {
+  start: (param: { sampleRate: number; frameSize: number }) => any
+  stop: () => any
+  onStart: () => any
+  onFrameRecorded: (param: { isLastFrame: boolean; frameBuffer: string }) => any
 }
-export default Recorder;
+
+const Recorder: FC<{
+  recording: boolean
+  onRecordingChange: (message: string, recording: boolean) => void
+  onRecordStart: () => void
+  onRecordEnd: () => void
+}> = ({ recording, onRecordingChange, onRecordStart, onRecordEnd }) => {
+  // @ts-expect-error
+  const recorder = useRef<Recorder | null>(null)
+  const webSocket = useRef<WebSocket | null>(null)
+  const recordingMessage = useRef('')
+  const recordingRef = useRef(recording)
+
+  useEffect(() => {
+    recordingRef.current = recording
+    if (!recording && webSocket.current)
+      webSocket.current?.close()
+  }, [recording])
+
+  const handleSocketOpen = () => {
+    // 开始录音
+    recorder.current?.start({ sampleRate: 16000, frameSize: 1280 })
+    if (webSocket.current)
+      webSocket.current.send(JSON.stringify(getRecorderParam()))
+    console.log(`handleSocketOpen recording ${recording}`)
+  }
+  const handleRecordEnd = () => {
+    onRecordEnd()
+    recorder.current?.stop()
+    webSocket.current = null
+    console.log(`handleRecordEnd recording ${recording}`)
+  }
+
+  const handleSocketClose = () => {
+    recorder.current?.stop()
+    // onRecordEnd()
+    console.log(`handleSocketClose recording ${recording}`)
+  }
+  const handleSocketMessage = (e: WebSocketEventMap['message']) => {
+    const jsonData = JSON.parse(e.data)
+    console.log(jsonData)
+    const currentMessage = parseRecordingMessage(jsonData)
+    recordingMessage.current = recordingMessage.current + currentMessage
+    onRecordingChange(recordingMessage.current, recordingRef.current)
+    console.log('handleSocketMessage recording', recordingRef.current)
+  }
+
+  const handleRecorderFrameRecorded = ({ isLastFrame, frameBuffer }: { isLastFrame: boolean; frameBuffer: string }) => {
+    if (webSocket.current && webSocket.current?.readyState === webSocket.current?.OPEN) {
+      webSocket.current.send(
+        JSON.stringify({
+          data: {
+            status: isLastFrame ? 2 : 1,
+            format: 'audio/L16;rate=16000',
+            encoding: 'raw',
+            audio: toBase64(frameBuffer),
+          },
+        }),
+      )
+      if (isLastFrame)
+        onRecordEnd()
+    }
+    console.log('handleRecorderFrameRecorded recording', recording)
+  }
+
+  const connectWebSocket = () => {
+    webSocket.current = getWebSocket(getRecordWebSocketUrl())
+    recorder.current = new XfRecorder('./iat') as unknown as XfRecord
+    recordingMessage.current = ''
+    webSocket.current?.addEventListener('open', handleSocketOpen)
+    webSocket.current?.addEventListener('message', handleSocketMessage)
+    webSocket.current?.addEventListener('close', handleSocketClose)
+    webSocket.current?.addEventListener('error', handleSocketClose)
+    if (recorder.current) {
+      recorder.current.onStart = () => onRecordStart()
+      recorder.current.onFrameRecorded = handleRecorderFrameRecorded
+    }
+  }
+  const handleRecordStart = () => {
+    console.log('handleRecordStart recording', recording)
+    connectWebSocket()
+  }
+  return (
+    <>
+      {recording
+        ? <Button type='primary' icon={<IconVoice />} onClick={handleRecordEnd}/>
+        : <Button type='secondary' icon={<IconVoice />} onClick={handleRecordStart}/>}
+    </>
+  )
+}
+export default Recorder

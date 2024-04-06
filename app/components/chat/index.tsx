@@ -1,21 +1,22 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
 import Textarea from 'rc-textarea'
+import { Button, Space, Tooltip } from '@arco-design/web-react'
+import { IconSend, IconSound } from '@arco-design/web-react/icon'
 import s from './style.module.css'
 import Answer from './answer'
 import Question from './question'
 import type { FeedbackFunc, Feedbacktype } from './type'
+import Recorder from './xfyun/Recorder'
 import type { VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
-import Tooltip from '@/app/components/base/tooltip'
 import Toast from '@/app/components/base/toast'
 import ChatImageUploader from '@/app/components/base/image-uploader/chat-image-uploader'
 import ImageList from '@/app/components/base/image-uploader/image-list'
 import { useImageFiles } from '@/app/components/base/image-uploader/hooks'
-import Recorder from './xfyun/Recorder';
 
 export type IChatProps = {
   chatList: IChatItem[]
@@ -30,6 +31,9 @@ export type IChatProps = {
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
   onSend?: (message: string, files: VisionFile[]) => void
+  isDefaultReading: boolean
+  onDefaultReadingTrigger: (flag: boolean) => void
+  onReadingTrigger: (readingOrStop: boolean, itemId: string) => void
   useCurrentUserAvatar?: boolean
   isResponsing?: boolean
   controlClearQuery?: number
@@ -64,14 +68,19 @@ const Chat: FC<IChatProps> = ({
   onFeedback,
   checkCanSend,
   onSend = () => { },
+  isDefaultReading,
+  onDefaultReadingTrigger,
+  onReadingTrigger,
   useCurrentUserAvatar,
   isResponsing,
   controlClearQuery,
   visionConfig,
 }) => {
   const { t } = useTranslation()
+  const [_readingItemId, setReadingItemId] = useState<null | string>(null)
   const { notify } = Toast
   const isUseInputMethod = useRef(false)
+  const [recording, setRecording] = useState<boolean>(false)
 
   const [query, setQuery] = React.useState('')
   const handleContentChange = (e: any) => {
@@ -123,7 +132,24 @@ const Chat: FC<IChatProps> = ({
   }
 
   const handleSend = () => {
-    doHandleSend(query);
+    console.log('handleSend recordingStatus', recording, 'query', query)
+    setRecording(false)
+    doHandleSend(query)
+  }
+
+  const onRecordChange = (recordMessage: string, isRecording: boolean) => {
+    console.log('recordingStatus', recording, 'query', query)
+    if (isRecording)
+      setQuery(recordMessage)
+  }
+
+  const onRecordEnd = () => {
+    setRecording(false)
+  }
+
+  const onRecordStart = () => {
+    setRecording(true)
+    console.log('onRecordStart recordingStatus', recording)
   }
 
   const handleKeyUp = (e: any) => {
@@ -142,7 +168,10 @@ const Chat: FC<IChatProps> = ({
       e.preventDefault()
     }
   }
-
+  const onReadTrigger = (flag: boolean, itemId: string) => {
+    setReadingItemId(itemId)
+    onReadingTrigger(flag, itemId)
+  }
   return (
     <div className={cn(!feedbackDisabled && 'px-3.5', 'h-full')}>
       {/* Chat List */}
@@ -153,6 +182,8 @@ const Chat: FC<IChatProps> = ({
             return <Answer
               key={item.id}
               item={item}
+              isDefaultReading={isDefaultReading}
+              onReadTrigger={onReadTrigger}
               feedbackDisabled={feedbackDisabled}
               onFeedback={onFeedback}
               isResponsing={isResponsing && isLast}
@@ -196,9 +227,14 @@ const Chat: FC<IChatProps> = ({
                   </>
                 )
               }
+              <div className="absolute">
+                <Tooltip position='tl' trigger='hover' content='开启后会语音跟读答案'>
+                  <Button className="absolute" shape='circle' type={isDefaultReading ? 'primary' : 'secondary'} icon={<IconSound />} onClick={() => onDefaultReadingTrigger(!isDefaultReading)}/>
+                </Tooltip>
+              </div>
               <Textarea
                 className={`
-                  block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-sm text-gray-700 outline-none appearance-none resize-none
+                  ml-10 block w-full px-2 pr-[118px] py-[7px] leading-5 max-h-none text-sm text-gray-700 outline-none appearance-none resize-none
                   ${visionConfig?.enabled && 'pl-12'}
                 `}
                 value={query}
@@ -208,19 +244,19 @@ const Chat: FC<IChatProps> = ({
                 autoSize
               />
               <div className="absolute bottom-2 right-2 flex items-center h-8">
-                <Recorder handleSend={doHandleSend} />
                 <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
-                    </div>
-                  }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
+                <Space size={10}>
+                  <Tooltip position='tl' trigger='hover' content='点击一次开始录音，再次点击结束录音'>
+                    <Recorder recording={recording}
+                      onRecordingChange={onRecordChange}
+                      onRecordEnd={onRecordEnd}
+                      onRecordStart={onRecordStart}/>
+                  </Tooltip>
+
+                  <Tooltip position='tl' trigger='hover' content={`${t('common.operation.send')} Enter;${t('common.operation.lineBreak')} Shift Enter`}>
+                    <Button type='secondary' icon={<IconSend />} onClick={handleSend}/>
+                  </Tooltip>
+                </Space>
               </div>
             </div>
           </div>

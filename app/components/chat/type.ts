@@ -72,6 +72,7 @@ export type CitationItem = {
 
 export type IChatItem = {
   id: string
+  isReading: string
   content: string
   citation?: CitationItem[]
   /**
