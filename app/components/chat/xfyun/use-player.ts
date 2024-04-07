@@ -4,13 +4,11 @@ import { getWebSocket } from '@/app/api/utils/socket'
 import type { XfAudioPlay } from '@/app/components/chat/xfyun/xf-util'
 import { getPlayWebSocketUrl, getPlayerParam } from '@/app/components/chat/xfyun/xf-util'
 
-const playMessage = (message: string): Promise<{
+const playMessage = (socket: WebSocket, currentAudio: XfAudioPlay, message: string): Promise<{
   socket: WebSocket
   audio: XfAudioPlay
 }> => {
   // 在组件挂载时建立 socket 连接
-  const socket = getWebSocket(getPlayWebSocketUrl())
-  const currentAudio = (new AudioPlayer('./tts') as unknown as XfAudioPlay)
   return new Promise((resolve, reject) => {
     socket.onerror = (e) => {
       console.error('socket.onerror', e)
@@ -54,17 +52,17 @@ export const usePlayer = () => {
   const [defaultReading, setDefaultReading] = useState(false)
 
   const handleStop = () => {
-    setDefaultReading(false)
     playerSocket.current?.close()
     audioPlayer.current?.stop()
   }
 
   const handlePlay = async (message: string) => {
-    // 判断当前是否有语言，有则终止，终止后再播放当前语音，如果是还在描写中则逐个播放
-    setDefaultReading(true)
-    const { socket, audio } = await playMessage(message)
+    const socket = getWebSocket(getPlayWebSocketUrl())
+    const currentAudio = (new AudioPlayer('./tts') as unknown as XfAudioPlay)
     playerSocket.current = socket
-    audioPlayer.current = audio
+    audioPlayer.current = currentAudio
+    // 判断当前是否有语言，有则终止，终止后再播放当前语音，如果是还在描写中则逐个播放
+    await playMessage(socket, currentAudio, message)
     console.log('playMessage end')
   }
 
