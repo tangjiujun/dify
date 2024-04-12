@@ -5,7 +5,7 @@ import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
 import Textarea from 'rc-textarea'
 import { Button, Space, Tooltip } from '@arco-design/web-react'
-import { IconSend, IconSound } from '@arco-design/web-react/icon'
+import { IconSend } from '@arco-design/web-react/icon'
 import s from './style.module.css'
 import Answer from './answer'
 import Question from './question'
@@ -149,6 +149,7 @@ const Chat: FC<IChatProps> = ({
 
   const onRecordStart = () => {
     setRecording(true)
+    onDefaultReadingTrigger(true)
     console.log('onRecordStart recordingStatus', recording)
   }
 
@@ -228,8 +229,11 @@ const Chat: FC<IChatProps> = ({
                 )
               }
               <div className="absolute">
-                <Tooltip position='tl' trigger='hover' content='开启后会语音跟读答案'>
-                  <Button className="absolute" shape='circle' type={isDefaultReading ? 'primary' : 'secondary'} icon={<IconSound />} onClick={() => onDefaultReadingTrigger(!isDefaultReading)}/>
+                <Tooltip position='tl' trigger='hover' content='点击一次开始录音，再次点击结束录音'>
+                  <Recorder recording={recording}
+                    onRecordingChange={onRecordChange}
+                    onRecordEnd={onRecordEnd}
+                    onRecordStart={onRecordStart}/>
                 </Tooltip>
               </div>
               <Textarea
@@ -246,13 +250,6 @@ const Chat: FC<IChatProps> = ({
               <div className="absolute bottom-2 right-2 flex items-center h-8">
                 <div className={`${s.count} mr-4 h-5 leading-5 text-sm bg-gray-50 text-gray-500`}>{query.trim().length}</div>
                 <Space size={10}>
-                  <Tooltip position='tl' trigger='hover' content='点击一次开始录音，再次点击结束录音'>
-                    <Recorder recording={recording}
-                      onRecordingChange={onRecordChange}
-                      onRecordEnd={onRecordEnd}
-                      onRecordStart={onRecordStart}/>
-                  </Tooltip>
-
                   <Tooltip position='tl' trigger='hover' content={`${t('common.operation.send')} Enter;${t('common.operation.lineBreak')} Shift Enter`}>
                     <Button type='secondary' icon={<IconSend />} onClick={handleSend}/>
                   </Tooltip>

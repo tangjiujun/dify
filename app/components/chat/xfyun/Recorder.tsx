@@ -1,7 +1,7 @@
 import type { FC } from 'react'
 import React, { useEffect, useRef } from 'react'
 import { Button } from '@arco-design/web-react'
-import { IconVoice } from '@arco-design/web-react/icon'
+import { IconSound } from '@arco-design/web-react/icon'
 import XfRecorder from '@/utils/xfyun/iat.umd'
 import { getWebSocket } from '@/app/api/utils/socket'
 import {
@@ -102,8 +102,8 @@ const Recorder: FC<{
   return (
     <>
       {recording
-        ? <Button type='primary' icon={<IconVoice />} onClick={handleRecordEnd}/>
-        : <Button type='secondary' icon={<IconVoice />} onClick={handleRecordStart}/>}
+        ? <Button type='primary' icon={<IconSound />} onClick={handleRecordEnd}/>
+        : <Button type='secondary' icon={<IconSound />} onClick={handleRecordStart}/>}
     </>
   )
 }

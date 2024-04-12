@@ -57,6 +57,7 @@ export const usePlayer = () => {
   }
 
   const handlePlay = async (message: string) => {
+    setDefaultReading(false)
     const socket = getWebSocket(getPlayWebSocketUrl())
     const currentAudio = (new AudioPlayer('./tts') as unknown as XfAudioPlay)
     playerSocket.current = socket
