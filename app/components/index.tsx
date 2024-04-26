@@ -11,6 +11,7 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
+import Blob from '@/app/components/blob'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ConversationItem, Feedbacktype, IChatItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import { Resolution, TransferMethod } from '@/types/app'
@@ -642,6 +643,7 @@ const Main: FC = () => {
           }
         </div>
       </div>
+      <Blob />
     </div>
   )
 }
