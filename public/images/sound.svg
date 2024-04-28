@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+    <linearGradient id="gradient">
+        <stop stop-color="#0ff"/>
+        <stop offset="1" stop-color="#f0f"/>
+    </linearGradient>
+    <filter id="filter" y="-1" height="3">
+        <feOffset dy="-45" result="o"/>
+        <feTurbulence baseFrequency=".04 .001" numOctaves="4" seed="1" result="a">
+            <animate attributeName="seed" calcMode="discrete" by="2" dur="0.5s" repeatCount="indefinite" accumulate="sum"/>
+        </feTurbulence>
+        <feTurbulence baseFrequency=".04 .001" numOctaves="4" seed="2">
+            <animate attributeName="seed" calcMode="discrete" by="2" dur="0.5s" repeatCount="indefinite" accumulate="sum" begin="0.25s"/>
+        </feTurbulence>
+        <feComposite operator="arithmetic" in="a">
+            <animate attributeName="k2" values="1;0;1" dur="0.5s" repeatCount="indefinite"/>
+            <animate attributeName="k3" values="0;1;0" dur="0.5s" repeatCount="indefinite"/>
+        </feComposite>
+        <feDisplacementMap in="o" scale="90"/>
+        <feComposite in="SourceGraphic" operator="in"/>
+    </filter>
+    <rect width="100%" height="100%" fill="#ddd"/>
+    <rect id="half" x="-9%" y="50%" width="120%" height="75" fill="url(#gradient)" filter="url(#filter)"/>
+    <use href="#half" y="-100.1%" transform="rotate(180) scale(-1, 1)"/>
+</svg>

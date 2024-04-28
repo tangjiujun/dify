@@ -6,12 +6,13 @@ import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
 import { usePlayer } from './chat/xfyun/use-player'
+import { AiShade } from '@/app/components/ai-shade'
+import { useSoundStore } from '@/app/store'
 import useConversation from '@/hooks/use-conversation'
 import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import Blob from '@/app/components/blob'
 import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ConversationItem, Feedbacktype, IChatItem, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import { Resolution, TransferMethod } from '@/types/app'
@@ -88,7 +89,7 @@ const Main: FC = () => {
     setCurrInputs(inputs)
     setChatStarted()
     // parse variables in introduction
-    setChatList(generateNewChatListWithOpenstatement('', inputs))
+    setChatData(generateNewChatListWithOpenstatement('', inputs))
   }
   const hasSetInputs = (() => {
     if (!isNewConversation)
@@ -147,12 +148,12 @@ const Main: FC = () => {
             message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
           })
         })
-        setChatList(newChatList)
+        setChatData(newChatList)
       })
     }
 
     if (isNewConversation && isChatStarted)
-      setChatList(generateNewChatListWithOpenstatement())
+      setChatData(generateNewChatListWithOpenstatement())
   }
   useEffect(handleConversationSwitch, [currConversationId, inited])
 
@@ -172,8 +173,14 @@ const Main: FC = () => {
   /*
   * chat info. chat is under conversation.
   */
+  const { setChatItems } = useSoundStore()
   const [chatList, setChatList, getChatList] = useGetState<IChatItem[]>([])
   const chatListDomRef = useRef<HTMLDivElement>(null)
+
+  const setChatData = (items: IChatItem[]) => {
+    setChatList(items)
+    setChatItems(items)
+  }
   useEffect(() => {
     // scroll to bottom
     if (chatListDomRef.current)
@@ -319,11 +326,11 @@ const Main: FC = () => {
 
         draft.push({ ...responseItem })
       })
-    setChatList(newListWithAnswer)
+    setChatData(newListWithAnswer)
   }
 
   const handleReadingTrigger = (flag: boolean, itemId: string) => {
-    setChatList(chatList.map(item => ({
+    setChatData(chatList.map(item => ({
       ...item,
       ...(item.id === itemId ? { isReading: flag } : {}),
     })))
@@ -372,7 +379,7 @@ const Main: FC = () => {
     }
 
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
-    setChatList(newList)
+    setChatData(newList)
 
     let isAgentMode = false
 
@@ -509,7 +516,7 @@ const Main: FC = () => {
                 ...responseItem,
               })
             })
-          setChatList(newListWithAnswer)
+          setChatData(newListWithAnswer)
           return
         }
         // not support show citation
@@ -517,7 +524,7 @@ const Main: FC = () => {
         if (responseItem.isReading) {
           console.log('responseItem.content-', responseItem)
           handlePlay(responseItem.content).then(() => {
-            setChatList(() => chatList.map(it => ({
+            setChatData(() => chatList.map(it => ({
               ...it,
               ...(it.id === responseItem.id ? { isReading: false } : {}),
             })))
@@ -532,10 +539,10 @@ const Main: FC = () => {
 
             draft.push({ ...responseItem })
           })
-        setChatList(newListWithAnswer)
+        setChatData(newListWithAnswer)
       },
       onMessageReplace: (messageReplace) => {
-        setChatList(produce(
+        setChatData(produce(
           getChatList(),
           (draft) => {
             const current = draft.find(item => item.id === messageReplace.id)
@@ -548,7 +555,7 @@ const Main: FC = () => {
       onError() {
         setResponsingFalse()
         // role back placeholder answer
-        setChatList(produce(getChatList(), (draft) => {
+        setChatData(produce(getChatList(), (draft) => {
           draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
         }))
       },
@@ -566,7 +573,7 @@ const Main: FC = () => {
       }
       return item
     })
-    setChatList(newChatList)
+    setChatData(newChatList)
     notify({ type: 'success', message: t('common.api.success') })
   }
 
@@ -643,7 +650,7 @@ const Main: FC = () => {
           }
         </div>
       </div>
-      <Blob />
+      <AiShade />
     </div>
   )
 }
