@@ -10,7 +10,7 @@ import {
   parseRecordingMessage,
   toBase64,
 } from '@/app/components/chat/xfyun/xf-util'
-import {useSoundStore} from "@/app/store";
+import { useSoundStore } from '@/app/store'
 
 type XfRecord = {
   start: (param: { sampleRate: number; frameSize: number }) => any
@@ -30,7 +30,7 @@ const Recorder: FC<{
   const webSocket = useRef<WebSocket | null>(null)
   const recordingMessage = useRef('')
   const recordingRef = useRef(recording)
-  const { startRecord, endRecord } = useSoundStore();
+  const { startRecord, endRecord } = useSoundStore()
 
   useEffect(() => {
     recordingRef.current = recording
@@ -67,7 +67,7 @@ const Recorder: FC<{
     console.log('handleSocketMessage recording', recordingRef.current)
   }
 
-  const handleRecorderFrameRecorded = ({ isLastFrame, frameBuffer }: { isLastFrame: boolean; frameBuffer: string }) => {
+  const handleRecorderFrameRecorded = ({ isLastFrame, frameBuffer }: { isLastFrame: boolean; frameBuffer: number }) => {
     if (webSocket.current && webSocket.current?.readyState === webSocket.current?.OPEN) {
       webSocket.current.send(
         JSON.stringify({

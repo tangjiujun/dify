@@ -16,7 +16,6 @@ import { Markdown } from '@/app/components/base/markdown'
 import type { Emoji } from '@/types/tools'
 type IAnswerProps = {
   item: IChatItem
-  isDefaultReading: boolean
   feedbackDisabled: boolean
   onReadTrigger: (flag: boolean, itemId: string) => void
   onFeedback?: FeedbackFunc
@@ -27,7 +26,6 @@ type IAnswerProps = {
 // The component needs to maintain its own state to control whether to display input component
 const Answer: FC<IAnswerProps> = ({
   item,
-  isDefaultReading,
   feedbackDisabled = false,
   onReadTrigger,
   isResponsing,

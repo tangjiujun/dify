@@ -11,6 +11,7 @@ import Answer from './answer'
 import Question from './question'
 import type { FeedbackFunc, Feedbacktype } from './type'
 import Recorder from './xfyun/Recorder'
+import { useSoundStore } from '@/app/store'
 import type { VisionFile, VisionSettings } from '@/types/app'
 import { TransferMethod } from '@/types/app'
 import Toast from '@/app/components/base/toast'
@@ -80,7 +81,7 @@ const Chat: FC<IChatProps> = ({
   const [_readingItemId, setReadingItemId] = useState<null | string>(null)
   const { notify } = Toast
   const isUseInputMethod = useRef(false)
-  const [recording, setRecording] = useState<boolean>(false)
+  const { isRecording, startRecord, endRecord } = useSoundStore()
 
   const [query, setQuery] = React.useState('')
   const handleContentChange = (e: any) => {
@@ -132,25 +133,25 @@ const Chat: FC<IChatProps> = ({
   }
 
   const handleSend = () => {
-    console.log('handleSend recordingStatus', recording, 'query', query)
-    setRecording(false)
+    console.log('handleSend recordingStatus', isRecording, 'query', query)
+    endRecord()
     doHandleSend(query)
   }
 
   const onRecordChange = (recordMessage: string, isRecording: boolean) => {
-    console.log('recordingStatus', recording, 'query', query)
+    console.log('recordingStatus', isRecording, 'query', query)
     if (isRecording)
       setQuery(recordMessage)
   }
 
   const onRecordEnd = () => {
-    setRecording(false)
+    endRecord()
   }
 
   const onRecordStart = () => {
-    setRecording(true)
+    startRecord()
     onDefaultReadingTrigger(true)
-    console.log('onRecordStart recordingStatus', recording)
+    console.log('onRecordStart recordingStatus', isRecording)
   }
 
   const handleKeyUp = (e: any) => {
@@ -230,7 +231,7 @@ const Chat: FC<IChatProps> = ({
               }
               <div className="absolute">
                 <Tooltip position='tl' trigger='hover' content='点击一次开始录音，再次点击结束录音'>
-                  <Recorder recording={recording}
+                  <Recorder recording={isRecording}
                     onRecordingChange={onRecordChange}
                     onRecordEnd={onRecordEnd}
                     onRecordStart={onRecordStart}/>
