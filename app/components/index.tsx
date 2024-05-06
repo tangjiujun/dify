@@ -650,7 +650,7 @@ const Main: FC = () => {
           }
         </div>
       </div>
-      <AiShade />
+      {isChatStarted && <AiShade />}
     </div>
   )
 }
