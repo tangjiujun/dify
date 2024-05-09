@@ -1,3 +1,4 @@
+'use client'
 import React, { useEffect, useRef } from 'react'
 // @ts-expect-error
 import * as SineWaves from 'sine-waves'

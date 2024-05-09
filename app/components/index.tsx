@@ -48,6 +48,8 @@ const Main: FC = () => {
     transfer_methods: [TransferMethod.local_file],
   })
 
+  const { isShow } = useSoundStore()
+
   useEffect(() => {
     if (APP_INFO?.title)
       document.title = `${APP_INFO.title}`
@@ -82,7 +84,7 @@ const Main: FC = () => {
   } = useConversation()
 
   const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
-  const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
+  const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(true)
   const handleStartChat = (inputs: Record<string, any>) => {
     createNewChat()
     setConversationIdChangeBecauseOfNew(true)
@@ -299,6 +301,8 @@ const Main: FC = () => {
     return true
   }
 
+  const aiShadeRef = useRef()
+
   const [controlFocus, setControlFocus] = useState(0)
   const [openingSuggestedQuestions, setOpeningSuggestedQuestions] = useState<string[]>([])
   const [messageTaskId, setMessageTaskId] = useState('')
@@ -340,6 +344,8 @@ const Main: FC = () => {
   }
 
   const handleSend = async (message: string, files?: VisionFile[]) => {
+    if (!message)
+      return
     if (isResponsing) {
       notify({ type: 'info', message: t('app.errorMessage.waitForResponse') })
       return
@@ -450,6 +456,8 @@ const Main: FC = () => {
         setChatNotStarted()
         setCurrConversationId(tempNewConversationId, APP_ID, true)
         setResponsingFalse()
+        await handlePlay(responseItem.content)
+        aiShadeRef.current?.startListen()
       },
       onFile(file) {
         const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
@@ -521,15 +529,6 @@ const Main: FC = () => {
         }
         // not support show citation
         // responseItem.citation = messageEnd.retriever_resources
-        if (responseItem.isReading) {
-          console.log('responseItem.content-', responseItem)
-          handlePlay(responseItem.content).then(() => {
-            setChatData(() => chatList.map(it => ({
-              ...it,
-              ...(it.id === responseItem.id ? { isReading: false } : {}),
-            })))
-          })
-        }
 
         const newListWithAnswer = produce(
           getChatList().filter(item => item.id !== responseItem.id && item.id !== placeholderAnswerId),
@@ -650,7 +649,7 @@ const Main: FC = () => {
           }
         </div>
       </div>
-      {isChatStarted && <AiShade />}
+      { isShow && <AiShade onSend={handleSend} isResponsing={isResponsing} ref={aiShadeRef } />}
     </div>
   )
 }

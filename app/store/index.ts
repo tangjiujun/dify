@@ -1,5 +1,5 @@
 import create from 'zustand'
-import { last } from 'lodash'
+import { chain } from 'lodash'
 import type { IChatItem } from '@/types/app'
 
 type SoundState = {
@@ -16,6 +16,7 @@ type SoundState = {
 }
 
 export const useSoundStore = create<SoundState>(set => ({
+  isShow: true,
   chatItems: [],
   isDefaultReading: true,
   isPlaying: false,
@@ -27,5 +28,8 @@ export const useSoundStore = create<SoundState>(set => ({
   setChatItems: (chatItems: IChatItem[]) => set(() => ({ chatItems })),
   setDefaultReading: (defaultReading: boolean) => set(() => ({ isDefaultReading: defaultReading })),
 }))
-
-export const selectCurrentAnswer = (state: SoundState) => last((state.chatItems || []).filter(it => it.isAnswer))?.content || ''
+export const selectCurrentAnswer = (state: SoundState) => chain(state.chatItems)
+  .filter(it => it.isAnswer)
+  .last()
+  .get('content')
+  .value()
