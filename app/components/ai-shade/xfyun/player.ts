@@ -17,6 +17,7 @@ const playMessage = (
   socket: WebSocket,
   currentAudio: XfAudioPlay,
   message: string,
+  globalResolve: (value: PromiseLike<unknown> | unknown) => void,
 ): Promise<{
   socket: WebSocket
   audio: XfAudioPlay
@@ -52,6 +53,7 @@ const playMessage = (
           globalSocket = null
           globalAudio = null
           audioBufferSourceNode.removeEventListener('ended', handleEnded)
+          globalResolve('end')
         }
         console.log(audioBufferSourceNode)
         if (audioBufferSourceNode)
@@ -76,6 +78,11 @@ const playMessage = (
 export const handlePlay = async (message: string) => {
   console.log(globalSocket || globalAudio)
   if (globalSocket && globalAudio) return
+
+  let globalResolve: (value: PromiseLike<unknown> | unknown) => void
+  const promise = new Promise(resolve => {
+    globalResolve = resolve
+  })
   try {
     globalSocket = getWebSocket(getPlayWebSocketUrl())
 
@@ -84,11 +91,13 @@ export const handlePlay = async (message: string) => {
     eventTarget.dispatchEvent(playStartEvent)
 
     // 判断当前是否有语言，有则终止，终止后再播放当前语音，如果是还在描写中则逐个播放
-    await playMessage(globalSocket, globalAudio, message)
+    await playMessage(globalSocket, globalAudio, message, globalResolve)
 
     console.log('playMessage end')
   } finally {
     if (globalSocket) globalSocket.close()
     globalSocket = null
   }
+
+  return promise
 }

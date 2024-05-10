@@ -37,8 +37,13 @@ const handleRecordEnd = () => {
     recordEndEvent.meta = { message: recordingMessage }
     eventTarget.dispatchEvent(recordEndEvent)
   }
-  recorder?.stop()
-  webSocket?.stop()
+  try {
+    recorder?.stop()
+    webSocket?.close()
+  } catch (e) {
+    console.info(e)
+  }
+
   recorder = undefined
   webSocket = undefined
 
