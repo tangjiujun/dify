@@ -83,7 +83,8 @@ type ChatListState = {
 export const useChatListStore = create<ChatListState>(set => ({
   chatItems: [],
   hello: 'hi, 我是亮仔， 什么问题都可以问我呦',
-  answer: 'hi, 我是亮仔， 什么问题都可以问我呦',
+  answer:
+    'hi, 我是亮仔， 什么问题都可以问我呦,我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦hi, 我是亮仔， 什么问题都可以问我呦',
   request: '',
   addItem: (item: IChatItem) => {
     set(state => {

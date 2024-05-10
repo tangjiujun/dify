@@ -6,25 +6,10 @@ import { connectWebSocket } from './xfyun/recorder'
 import { sendChat } from '@/app/components/ai-shade/xfyun/chat'
 import type { MyEvent } from '@/app/components/ai-shade/xfyun/event'
 import { eventTarget } from '@/app/components/ai-shade/xfyun/event'
-import { handlePlay } from '@/app/components/ai-shade/xfyun/player'
-import {
-  AiStatus,
-  useAiStore,
-  useChatListStore,
-  useSoundStore,
-} from '@/app/store'
+import { closePlay, handlePlay } from '@/app/components/ai-shade/xfyun/player'
+import { AiStatus, useAiStore, useChatListStore } from '@/app/store'
 
 export const AiShade: React.FC = () => {
-  const {
-    isRecording,
-    isPlaying,
-    isShow,
-    isOpenPlay,
-    startRecord,
-    endRecord,
-    openPlay,
-    closePlay,
-  } = useSoundStore()
   const { status, setStatus } = useAiStore()
   const { hello, answer, setAnswer, request, setRequest } = useChatListStore()
 
@@ -33,8 +18,8 @@ export const AiShade: React.FC = () => {
   }
 
   const handleRecord = async () => {
+    setRequest('')
     await connectWebSocket()
-    startRecord()
   }
 
   useEffect(() => {
@@ -45,6 +30,8 @@ export const AiShade: React.FC = () => {
           await handlePlay(answer)
         } catch (e) {
           console.log(e)
+        } finally {
+          setStatus(AiStatus.Stop)
         }
       }
 
@@ -79,12 +66,15 @@ export const AiShade: React.FC = () => {
       }
 
       if ([AiStatus.Stop].includes(status)) {
-        setAnswer('hi, 我是亮仔， 什么问题都可以问我呦')
-        setStatus(AiStatus.Init)
       }
+      // setAnswer('hi, 我是亮仔， 什么问题都可以问我呦')
+      // setStatus(AiStatus.Init)
     }
     console.log(status)
     handleStatus()
+    return () => {
+      closePlay()
+    }
   }, [status])
 
   useEffect(() => {
@@ -103,28 +93,16 @@ export const AiShade: React.FC = () => {
       console.log('message', message)
       if (message) setStatus(AiStatus.Think)
       else setStatus(AiStatus.Stop)
-      openPlay()
-    }
-
-    const handlePlayStart = (event: MyEvent) => {
-      console.log('### playStart')
-    }
-    const handlePlayEnd = (event: MyEvent) => {
-      console.log('### playEnd')
     }
 
     eventTarget.addEventListener('recordStart', handleRecordStart)
     eventTarget.addEventListener('recordChange', handleRecordChange as any)
     eventTarget.addEventListener('recordEnd', handleRecordEnd as any)
 
-    eventTarget.addEventListener('playStart', handlePlayStart as any)
-    eventTarget.addEventListener('playEnd', handlePlayEnd as any)
     return () => {
       eventTarget.removeEventListener('recordStart', handleRecordStart)
       eventTarget.removeEventListener('recordChange', handleRecordChange as any)
       eventTarget.removeEventListener('recordEnd', handleRecordEnd as any)
-      eventTarget.removeEventListener('playStart', handlePlayStart as any)
-      eventTarget.removeEventListener('playEnd', handlePlayEnd as any)
     }
   }, [])
 
@@ -178,7 +156,7 @@ export const AiShade: React.FC = () => {
   return (
     <div className="fixed top-0 left-0 w-full h-full  bg-gray-900 bg-opacity-75">
       <div className="absolute top-0 bottom-0 left-0 right-0 flex items-center flex-col justify-center">
-        <div className="bg-gray-400 rounded-full border-0 border-gray-300 bg-opacity-75 w-[237px] h-[237px] flex justify-center items-end">
+        <div className="bg-gray-400 rounded-full border-0 border-white bg-opacity-30 w-[237px] h-[237px] flex justify-center items-end">
           <Image
             className="w-[190px]"
             src={src}
@@ -196,13 +174,20 @@ export const AiShade: React.FC = () => {
               <React.Fragment key={index}>{element}</React.Fragment>
             ))}
           </div>
-          {[AiStatus.Stop, AiStatus.Hi].includes(status) && (
+          {[AiStatus.Stop].includes(status) && (
             <div className="content-end">
               <div
-                className="inline-block p-3 pr-6 pl-6 text-white bg-blue-600 rounded-md"
+                className="inline-block p-4 pr-8 pl-8 text-white bg-blue-600 rounded-xl align-middle"
                 onClick={handleClick}
               >
-                🎤 点击开始说话
+                <Image
+                  className="inline align-middle"
+                  width={25}
+                  height="25"
+                  alt="mai"
+                  src="/images/mai.svg"
+                />
+                点击开始说话
               </div>
             </div>
           )}

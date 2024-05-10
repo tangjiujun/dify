@@ -9,8 +9,7 @@ export const toBase64 = (buffer: number) => {
   let binary = ''
   const bytes = new Uint8Array(buffer)
   const len = bytes.byteLength
-  for (let i = 0; i < len; i++)
-    binary += String.fromCharCode(bytes[i])
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i])
 
   return window.btoa(binary)
 }
@@ -25,12 +24,10 @@ export const encodeText = (text: string, type: string) => {
     let binary = ''
     const bytes = new Uint8Array(buf)
     const len = bytes.byteLength
-    for (let i = 0; i < len; i++)
-      binary += String.fromCharCode(bytes[i])
+    for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i])
 
     return window.btoa(binary)
-  }
-  else {
+  } else {
     return Base64.encode(text)
   }
 }
@@ -113,12 +110,16 @@ export const getPlayerParam = (text: string) => {
 }
 
 export const parseRecordingMessage = (jsonData: any) => {
-  return (jsonData?.data?.result?.ws || [])?.map((current: any) => current?.cw?.[0]?.w).join('')
+  return (jsonData?.data?.result?.ws || [])
+    ?.map((current: any) => current?.cw?.[0]?.w)
+    .join('')
 }
 
 export type XfAudioPlay = {
   start: (data: any) => void
   stop: () => void
+  status: string
   postMessage: (data: any) => void
   reset: () => void
+  onStop?: () => void
 }

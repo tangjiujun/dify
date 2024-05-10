@@ -1,5 +1,6 @@
 import {
   eventTarget,
+  playEndEvent,
   playStartEvent,
 } from '@/app/components/ai-shade/xfyun/event'
 import AudioPlayer from '@/utils/xfyun/tts.umd'
@@ -12,12 +13,10 @@ import {
 
 let globalSocket: WebSocket | null = null
 let globalAudio: XfAudioPlay | null = null
-
 const playMessage = (
   socket: WebSocket,
   currentAudio: XfAudioPlay,
   message: string,
-  globalResolve: (value: PromiseLike<unknown> | unknown) => void,
 ): Promise<{
   socket: WebSocket
   audio: XfAudioPlay
@@ -43,61 +42,75 @@ const playMessage = (
         resumePlayDuration: 1000,
       })
       socket.send(JSON.stringify(getPlayerParam(message)))
-      setTimeout(() => {
-        const audioBufferSourceNode =
-          globalAudio?.bufferSource as AudioBufferSourceNode
-
-        const handleEnded = () => {
-          console.log('ended')
-          if (globalSocket) globalSocket.close()
-          globalSocket = null
-          globalAudio = null
-          audioBufferSourceNode.removeEventListener('ended', handleEnded)
-          globalResolve('end')
-        }
-        console.log(audioBufferSourceNode)
-        if (audioBufferSourceNode)
-          audioBufferSourceNode.addEventListener('ended', handleEnded)
-        else handleEnded()
-      }, 1000)
     }
     socket.onmessage = e => {
       console.log('socket.onmessage')
       const jsonData = JSON.parse(e.data)
-      // 合成失败
-      if (jsonData.code !== 0) console.error(jsonData)
 
       currentAudio?.postMessage({
         type: 'base64',
         data: jsonData.data.audio,
-        // isLastData: jsonData.data.status === 2,
+        isLastData: jsonData.data.status === 2,
       })
+      if (jsonData.code === 0 && jsonData.data.status === 2) socket?.close()
     }
   })
 }
-export const handlePlay = async (message: string) => {
-  console.log(globalSocket || globalAudio)
-  if (globalSocket && globalAudio) return
 
-  let globalResolve: (value: PromiseLike<unknown> | unknown) => void
-  const promise = new Promise(resolve => {
-    globalResolve = resolve
+function signal(time: number, signalCondition: () => boolean) {
+  return new Promise(resolve => {
+    const intervalId = setInterval(() => {
+      if (signalCondition()) {
+        clearInterval(intervalId)
+        resolve(true)
+      }
+    }, time)
   })
+}
+
+const waitAudioPlayingStop = () => {
+  const isAudioPlayingStop = () => {
+    return globalAudio?.status === 'stop'
+  }
+
+  return signal(2000, () => {
+    return isAudioPlayingStop()
+  })
+}
+
+export const handlePlay = async (message: string) => {
+  if (globalAudio?.status === 'play') return
+
   try {
     globalSocket = getWebSocket(getPlayWebSocketUrl())
 
     globalAudio = new AudioPlayer('./tts') as unknown as XfAudioPlay
 
+    globalAudio.onStop = () => {
+      globalSocket?.close()
+    }
     eventTarget.dispatchEvent(playStartEvent)
 
     // 判断当前是否有语言，有则终止，终止后再播放当前语音，如果是还在描写中则逐个播放
-    await playMessage(globalSocket, globalAudio, message, globalResolve)
+    await playMessage(globalSocket, globalAudio, message)
 
     console.log('playMessage end')
+  } catch (e) {
+    console.log(e)
   } finally {
-    if (globalSocket) globalSocket.close()
-    globalSocket = null
+    await waitAudioPlayingStop()
   }
+  eventTarget.dispatchEvent(playEndEvent)
+}
 
-  return promise
+export const closePlay = () => {
+  try {
+    globalAudio?.stop()
+    globalAudio?.reset()
+    globalSocket?.close()
+  } catch (e) {
+    globalSocket = null
+    globalSocket = null
+    console.log(e)
+  }
 }
