@@ -1,4 +1,9 @@
-import { eventTarget, recordChangeEvent, recordEndEvent, recordStartEvent } from './event'
+import {
+  eventTarget,
+  recordChangeEvent,
+  recordEndEvent,
+  recordStartEvent,
+} from './event'
 import { getWebSocket } from '@/app/api/utils/socket'
 import {
   getRecordWebSocketUrl,
@@ -24,8 +29,7 @@ let recordingMessage = ''
 const handleSocketOpen = () => {
   // 开始录音
   recorder?.start({ sampleRate: 16000, frameSize: 1280 })
-  if (webSocket)
-    webSocket.send(JSON.stringify(getRecorderParam()))
+  if (webSocket) webSocket.send(JSON.stringify(getRecorderParam()))
 }
 
 const handleRecordEnd = () => {
@@ -33,8 +37,8 @@ const handleRecordEnd = () => {
     recordEndEvent.meta = { message: recordingMessage }
     eventTarget.dispatchEvent(recordEndEvent)
   }
-
   recorder?.stop()
+  webSocket?.stop()
   recorder = undefined
   webSocket = undefined
 
@@ -50,7 +54,6 @@ let timer: number
 const handleSocketMessage = (e: WebSocketEventMap['message']) => {
   clearTimeout(timer)
   const jsonData = JSON.parse(e.data)
-  console.log(jsonData)
   const currentMessage = parseRecordingMessage(jsonData)
   recordingMessage = recordingMessage + currentMessage
 
@@ -64,7 +67,10 @@ const handleSocketMessage = (e: WebSocketEventMap['message']) => {
 const handleRecorderFrameRecorded = ({
   isLastFrame,
   frameBuffer,
-}: { isLastFrame: boolean; frameBuffer: string }) => {
+}: {
+  isLastFrame: boolean
+  frameBuffer: string
+}) => {
   if (webSocket && webSocket?.readyState === webSocket?.OPEN) {
     webSocket.send(
       JSON.stringify({
@@ -76,8 +82,7 @@ const handleRecorderFrameRecorded = ({
         },
       }),
     )
-    if (isLastFrame)
-      handleRecordEnd()
+    if (isLastFrame) handleRecordEnd()
   }
 }
 

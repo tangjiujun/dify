@@ -8,8 +8,11 @@
       "error",
       "type"
     ],
+    "antfu/if-newline": "off",
     "no-console": "off",
     "indent": "off",
+    "operator-linebreak": "off",
+    "@typescript-eslint/brace-style": "off",
     "@typescript-eslint/indent": [
       "error",
       2,
